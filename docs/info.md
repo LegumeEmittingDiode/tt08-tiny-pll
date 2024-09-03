@@ -9,12 +9,12 @@ You can also include images in this folder and reference them in the markdown. E
 
 ## How it works
 
-Explain how your project works
+Multiplies the frequency of clk by a rational number A/B, where A and B are from 1 to 15. Designed for a 10 MHz input, which implies a tuning range of 67 kHz to 150 MHz. 4 independent channels are provided, along with a delta-sigma output to monitor the VCO control voltage of channel 0.
 
 ## How to test
 
-Explain how to use your project
+TBU
 
 ## External hardware
 
-List external hardware used in your project (e.g. PMOD, LED display, etc), if any
+Oscilloscope
