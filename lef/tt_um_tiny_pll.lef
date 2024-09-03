@@ -2,9 +2,9 @@ VERSION 5.7 ;
   NOWIREEXTENSIONATPIN ON ;
   DIVIDERCHAR "/" ;
   BUSBITCHARS "[]" ;
-MACRO tt08_tiny_pll
+MACRO tt_um_tiny_pll
   CLASS BLOCK ;
-  FOREIGN tt08_tiny_pll ;
+  FOREIGN tt_um_tiny_pll ;
   ORIGIN 0.000 0.000 ;
   SIZE 161.000 BY 111.520 ;
   PIN VGND
@@ -35,7 +35,7 @@ MACRO tt08_tiny_pll
         RECT 151.230 2.480 152.830 109.040 ;
     END
   END VGND
-  PIN VPWR
+  PIN VDPWR
     ANTENNAGATEAREA 1232.291504 ;
     ANTENNADIFFAREA 631.827759 ;
     PORT
@@ -58,7 +58,7 @@ MACRO tt08_tiny_pll
       LAYER met4 ;
         RECT 137.660 2.480 139.260 109.040 ;
     END
-  END VPWR
+  END VDPWR
   PIN clk
     ANTENNAGATEAREA 0.852000 ;
     PORT
@@ -442,6 +442,6 @@ MACRO tt08_tiny_pll
         RECT 126.090 24.840 137.260 102.780 ;
         RECT 139.660 24.840 144.145 109.440 ;
   END
-END tt08_tiny_pll
+END tt_um_tiny_pll
 END LIBRARY
 
