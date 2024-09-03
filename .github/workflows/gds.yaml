@@ -13,29 +13,26 @@ jobs:
         with:
           submodules: recursive
 
-      - name: Build GDS
-        uses: TinyTapeout/tt-gds-action@tt08
+      - name: Read top module name
+        uses: mikefarah/yq@v4
+        id: top_module
         with:
-          flow: openlane2
+          cmd: echo TOP_MODULE=`yq '.project.top_module' info.yaml` > $GITHUB_OUTPUT
 
+      - name: Create and publish the GDS artifact
+        uses: TinyTapeout/tt-gds-action/custom_gds@tt08
+        with:
+          top_module: ${{ steps.top_module.outputs.TOP_MODULE }}
+          gds_path: gds/${{ steps.top_module.outputs.TOP_MODULE }}.gds
+          lef_path: lef/${{ steps.top_module.outputs.TOP_MODULE }}.lef
+          verilog_path: src/project.v
+  
   precheck:
     needs: gds
     runs-on: ubuntu-latest
     steps:
       - name: Run Tiny Tapeout Precheck
         uses: TinyTapeout/tt-gds-action/precheck@tt08
-
-  gl_test:
-    needs: gds
-    runs-on: ubuntu-latest
-    steps:
-      - name: checkout repo
-        uses: actions/checkout@v4
-        with:
-          submodules: recursive
-
-      - name: GL test
-        uses: TinyTapeout/tt-gds-action/gl_test@tt08
 
   viewer:
     needs: gds
