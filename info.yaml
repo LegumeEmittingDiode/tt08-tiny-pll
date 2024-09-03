@@ -22,27 +22,27 @@ project:
 # The pinout of your project. Leave unused pins blank. DO NOT delete or add any pins.
 pinout:
   # Inputs
-  ui[0]: ""
-  ui[1]: ""
-  ui[2]: ""
-  ui[3]: ""
-  ui[4]: ""
-  ui[5]: ""
-  ui[6]: ""
-  ui[7]: ""
+  ui[0]: "csr_data_in[0]: Data input for PLL control registers"
+  ui[1]: "csr_data_in[1]: Data input for PLL control registers"
+  ui[2]: "csr_data_in[2]: Data input for PLL control registers"
+  ui[3]: "csr_data_in[3]: Data input for PLL control registers"
+  ui[4]: "csr_addr_in[0]: Address input for PLL control registers"
+  ui[5]: "csr_addr_in[1]: Address input for PLL control registers"
+  ui[6]: "csr_addr_in[2]: Address input for PLL control registers"
+  ui[7]: "csr_addr_in[3]: Address input for PLL control registers"
 
   # Outputs
-  uo[0]: ""
-  uo[1]: ""
-  uo[2]: ""
-  uo[3]: ""
-  uo[4]: ""
+  uo[0]: "clk_out[0]: Channel 0 PLL clock output"
+  uo[1]: "clk_out[1]: Channel 1 PLL clock output"
+  uo[2]: "clk_out[2]: Channel 2 PLL clock output"
+  uo[3]: "clk_out[3]: Channel 3 PLL clock output"
+  uo[4]: "adc_out: Channel 0 control voltage ADC output"
   uo[5]: ""
   uo[6]: ""
   uo[7]: ""
 
   # Bidirectional pins
-  uio[0]: ""
+  uio[0]: "clk_csr: Clock input for PLL control registers"
   uio[1]: ""
   uio[2]: ""
   uio[3]: ""
