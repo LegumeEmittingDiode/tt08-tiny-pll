@@ -1,5 +1,5 @@
 # Tiny PLL
-A fractional-N frequency synthesizer using less than 6% of the area of a 1x1 TT tile.
+A 4-channel fractional-N PLL for Tiny Tapeout 8 in a 1x1 digital tile.
 
 ![GDS render](/docs/render.png)
 
