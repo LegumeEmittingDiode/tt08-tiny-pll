@@ -44,7 +44,7 @@ synthesis and PnR was done using a custom OpenROAD flow; and `magic` and
 ## PLL
 
 The top-level schematic of `tiny_pll` is shown below:
-![PLL schematic](/docs/images/pll_sch.png)
+![PLL schematic](images/pll_sch.png)
 
 The PLL uses a standard fractional-N architecture, where an input and output
 frequency divider are used to set the frequency multiplication with respect to
@@ -60,7 +60,7 @@ of hierarchy are propagated to the top level and connected to VPWR and VGND.
 
 ### Divider
 
-![Divider schematic](/docs/images/pll_div_sch.png)
+![Divider schematic](images/pll_div_sch.png)
 
 Frequency dividers are implemented using a 4-bit binary counter followed by 4
 XOR gates to check for equality with a division ratio input `lmt[3..0]`. When
@@ -84,7 +84,7 @@ VPWR or VGND to avoid potential ESD issues.
 
 ### Phase-frequency detector (PFD)
 
-![PFD schematic](/docs/images/pll_pfd_sch.png)
+![PFD schematic](images/pll_pfd_sch.png)
 
 The PFD is composed of two DFFs, clocked by the divided VCO output and the
 reference input, respectively. Since the input of both DFFs is tied to 1, each
@@ -98,7 +98,7 @@ increase the minimum output pulse width and avoid charge pump glitches.
 
 ### Charge pump
 
-![Charge pump schematic](/docs/images/pll_cp_sch.png)
+![Charge pump schematic](images/pll_cp_sch.png)
 
 The charge pump uses two current sources (`MNSRC` and `MPSRC`), which can be
 interchangeably switched to the output with the `up` and `down` inputs. The
@@ -109,7 +109,7 @@ roughly equal drain-source saturation voltages (VDSAT).
 
 ### Loop filter
 
-![Loop filter schematic](/docs/images/pll_lf_sch.png)
+![Loop filter schematic](images/pll_lf_sch.png)
 
 The loop filter is implemented using a series R/C combination to compensate the
 loop transfer function such that a zero is placed below the crossover frequency
@@ -165,7 +165,7 @@ control voltage ripple.
 
 ### Voltage-controlled oscillator (VCO)
 
-![VCO schematic](/docs/images/pll_vco_sch.png)
+![VCO schematic](images/pll_vco_sch.png)
 
 The VCO is a 3-stage current-starved ring oscillator using standard cell
 inverters. The current sources are minimum-length to maximize W/L, which in turn
@@ -180,7 +180,7 @@ across process variations. Four "keeper" devices (`MNEN1`, `MNEN2`, `MNEN3` and
 
 ### Bias generator
 
-![Bias generator schematic](/docs/images/pll_bias_sch.png)
+![Bias generator schematic](images/pll_bias_sch.png)
 
 The bias generator is a self-biased current mirror, which provides a roughly
 supply-independent current for the charge pump. The exact current is highly
@@ -193,10 +193,3 @@ the mirror is active, `MNSU1` pulls `kick` low and disables the startup circuit.
 Multiple "keeper" devices are included to disable the circuit with zero static
 power consumption.
 
-# How to test
-
-TBU
-
-# External hardware
-
-Oscilloscope
