@@ -1,3 +1,7 @@
+# Table of contents
+
+[Circuit design](#Circuit design)
+
 # Circuit design
 
 This project showcases `tiny_pll`, a completely self-contained fractional-N
