@@ -416,7 +416,9 @@ The testbench performs the following steps:
 
 As seen in the waveform plots above, lock is achieved for channels 0, 1 and 3
 within 2 us, with an additional ~1us for channel 2 since its output depends on
-that of channel 3.
+that of channel 3. The ADC output at `uo_out[4]` was observed to behave as
+intended, with a time-varying duty cycle corresponding to the control voltage
+for PLL channel 0.
 
 Due to the large number of parasitic resistors and capacitors, the simulation
 required roughly 10 hours to complete using an Intel i7-1065G7 processor with
