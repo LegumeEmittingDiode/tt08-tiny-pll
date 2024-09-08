@@ -15,6 +15,8 @@
 		* [Comparator](#adc_comp)
 		* [Bias generator](#adc_bias)
 		* [Reference voltage generator](#adc_vref)
+* [Simulation results](#sim)
+	* [Top level](#sim_top)
 
 <a name="circuit"></a>
 # Circuit design
@@ -421,5 +423,8 @@ to speed up transient simulation, as detailed in the `ngspice` user manual. The
 testbench uses the `d_source` XSPICE component to generate a digital stimulus
 from a `csv` input. This automatically sets `.options trtol=1`, which slows down
 transient simulation by a factor of 2. To speed up simulation, `PWL` voltage
-sources could be used to eliminate the need for XSPICE blocks.
+sources could be used to eliminate the need for XSPICE blocks. Although the
+simulation speed could be increased by increasing the maximum timestep from
+100ps to 1ns, this was found to result in incorrect operation of the PLL due to
+the short reset pulse used by this block internally.
 
