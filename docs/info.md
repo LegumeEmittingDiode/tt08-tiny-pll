@@ -396,7 +396,9 @@ in the extracted netlist is shown below:
 | `r` | 94,481 |
 | `c` | 50,817 |
 
-The results the top-level simulation are shown below:
+A large number of the `nfet_01v8` and `pfet_01v8_hvt` devices are located in the
+decap cells placed by the OpenROAD flow. The results the top-level simulation
+are shown below:
 
 ![Top-level simulation](images/self_lock.png)
 
