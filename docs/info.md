@@ -1,6 +1,4 @@
-# How it works
-
-## Overview
+# Overview
 
 This project showcases `tiny_pll`, a completely self-contained fractional-N
 frequency synthesizer using less than 6% of the area of a 1x1 TinyTapeout tile.
@@ -41,7 +39,7 @@ custom layout was done using `klayout` with the Efabless `sky130` PDK; digital
 synthesis and PnR was done using a custom OpenROAD flow; and `magic` and
 `netgen` were used for LVS, DRC and parasitic extraction.
 
-## PLL
+# PLL
 
 The top-level schematic of `tiny_pll` is shown below:
 ![PLL schematic](images/pll_sch.png)
@@ -58,7 +56,7 @@ bulk terminals of all PMOS and NMOS devices, respectively. This is done to
 ensure the corresponding terminals of the standard cell instances at each level
 of hierarchy are propagated to the top level and connected to VPWR and VGND.
 
-### Divider
+## Divider
 
 ![Divider schematic](images/pll_div_sch.png)
 
@@ -82,7 +80,7 @@ which implies a division ratio from `clk_in` to `clk_out` between 2 and 30.
 The tie cell `sky130_fd_sc_hd__conb_1` is used when gates must be connected to
 VPWR or VGND to avoid potential ESD issues.
 
-### Phase-frequency detector (PFD)
+## Phase-frequency detector (PFD)
 
 ![PFD schematic](images/pll_pfd_sch.png)
 
@@ -96,7 +94,7 @@ tied to VPWR.
 A NAND followed by an inverter is used instead of a single AND to slightly
 increase the minimum output pulse width and avoid charge pump glitches.
 
-### Charge pump
+## Charge pump
 
 ![Charge pump schematic](images/pll_cp_sch.png)
 
@@ -107,7 +105,7 @@ switches use nearly minimum width to reduce area, and minimum length to reduce
 capacitance. The PMOS switch uses 2x the W/L of the NMOS switch to ensure
 roughly equal drain-source saturation voltages (VDSAT).
 
-### Loop filter
+## Loop filter
 
 ![Loop filter schematic](images/pll_lf_sch.png)
 
@@ -163,7 +161,7 @@ capacitance multiplier was additionally seen to have poor high-frequency
 response compared to a MOS or MIM capacitor, which resulted in unacceptably high
 control voltage ripple.
 
-### Voltage-controlled oscillator (VCO)
+## Voltage-controlled oscillator (VCO)
 
 ![VCO schematic](images/pll_vco_sch.png)
 
@@ -178,7 +176,7 @@ frequency of 10 MHz, which helps ensure the maximum output frequency can be met
 across process variations. Four "keeper" devices (`MNEN1`, `MNEN2`, `MNEN3` and
 `MPEN`) are included to disable the circuit with zero static power consumption.
 
-### Bias generator
+## Bias generator
 
 ![Bias generator schematic](images/pll_bias_sch.png)
 
@@ -192,4 +190,129 @@ which pulls `bias_p` low and establishes a current in the mirror devices. Once
 the mirror is active, `MNSU1` pulls `kick` low and disables the startup circuit.
 Multiple "keeper" devices are included to disable the circuit with zero static
 power consumption.
+
+# ADC
+
+`tiny_adc` is a 1-bit, continuous-time, delta-sigma ADC. It is used to monitor
+the control voltage of one of the `tiny_pll` instances without consuming an
+analog I/O pin. This is useful to measure lock time and loop stability. The
+top-level schematic of `tiny_adc` is shown below:
+
+![ADC schematic](images/adc_sch.png)
+
+`XBUF_IN` is a unity-gain input buffer used to eliminate DC currents into the
+ADC input, which would disturb the PLL loop response. `XINT` is a
+continuous-time integrator which accumulates the error between the analog input
+and digital output. `XCMP` is a comparator used to resolve the integrator output
+to a digital signal. Hysteresis is included to ensure a repeatable minimum pulse
+width. The comparator output is buffered by `XBUF_OUT` to ensure fast edge
+rates. A final inversion by `XINV_OUT` is required to cancel the negative gain
+of the integrator. A reference voltage for the comparator is provided using a
+simple voltage divider with included bypass capacitance. A roughly
+temperature-independent 1 uA bias current is created by `XBIAS`, which is used
+in the opamps and comparators.
+
+## Opamp
+
+![Opamp schematic](images/adc_opamp_sch.png)
+
+`tiny_adc_opamp` is a two-stage, folded-cascode operational amplifier with
+rail-to-rail inputs and outputs. Complementary NMOS and PMOS input stages
+provide an input common-mode range within ~50 mV of each supply, and an inverter
+is used as the output stage to provide similar swing at the output. Frequency
+compensation is achieved using a MIM capacitor. Bias voltages for the cascode
+devices are generated using diode-connected devices. NMOS diodes are used for
+the NMOS devices, and similarly for the PMOS devices, to ensure a roughly
+constant VDS across process corners. The NMOS diode is split into two series
+devices to reduce area. An enable input is provided to power down the opamp with
+zero static power consumption.
+
+The tail current sources `MNTAIL` and `MPTAIL` are sized to match the devices in
+the bias generator, which in turn use a 1 uM channel length for high output
+resistance without the use of a cascode. The input devices `MNIN*` and `MPIN*`
+are minimum-length to reduce input capacitance and decrease VDSAT, which results
+from the high W/L. The output resistance of these devices is irrelevant since
+they drive a low-impedance load at the input to the cascode stage. The cascode
+and inverter stages use `L = 0.5` to ensure high gain while keeping devices
+small. All enable/disable switches use minimum length to reduce area.
+
+Bias current for the input devices is set by the bias generator, which sets a
+roughly 2 uA current for each differential pair, or 1 uA per input device. To
+avoid the need for additional bias generators, the cascode and output stages are
+self-biased. The diode-connected devices `MNDIO_OUT` and `MPDIO_OUT` appear in
+series across the supply rails and set a roughly 2 uA current for `MNDIO_OUT`,
+`MNOUT`, `MPDIO_OUT` and `MPOUT`. Accordingly, the cascode devices `M*CASC*`
+each carry the difference in current between the input devices and the
+diode-connected devices in the cascode stage, i.e., roughly 1 uA. The bias
+current of the output stage varies with output voltage but peaks at roughly 10
+uA near mid-supply.
+
+The compensation capacitor was chosen to yield a 65 degree phase margin with a
+10 fF load capacitance and `VOUT = 0.9 V`. The actual phase margin varies by
+output voltage due to the nonlinear output stage, with higher phase margin near
+either supply rail due to the decreased gain of the output stage. The phase
+margin was found to be degraded to roughly 55 degrees following parasitic
+extraction. The in-circuit phase margin is likely larger than this, however,
+since the 10 fF load estimate should be quite conservative. The input buffer
+amplifier drives a high-impedance load, meaning that the only purely capacitive
+load at its output is due to wiring parasitics over a fairly short distance. The
+integrator only drives the input of the comparator, which uses minimum-length
+devices with 1-2 fF of gate capacitance each.
+
+## Integrator
+
+![Integrator schematic](images/adc_int_sch.png)
+
+The integrator uses `tiny_adc_opamp` with two `sky130_fd_pr__res_xhigh_po_0p35`
+resistors and one MIM capacitor. The resistors are roughly 500 kOhm each, and
+the capacitor is 100 fF. Component values were chosen to ensure the minimum
+output pulse width is long enough to be accurately reproduced by the Tiny
+Tapeout mux and I/O cells. The minimum pulse width is approximately `R*C*Vh /
+VDD`, where `Vh` is the hysteresis of the comparator. If `Vh = 1 V`, `VDD = 1.8
+V`, `R = 500 kOhm` and `C = 100 fF`, the minimum pulse width is roughly 28 ns.
+Tiny Tapeout uses the `sky130_ef_io_gpiov2_pad` cell for I/O, which is specified
+for a maximum output frequency of 33 MHz. As this implies a pulse width of 15
+ns, the 28 ns pulse width used here should be comfortably within the limits of
+the I/O cells.
+
+## Comparator
+
+![Comparator schematic](images/adc_comp_sch.png)
+
+`tiny_adc_comp` is a two-stage comparator using a current mirror architecture,
+with cross-coupled PMOS devices used to add hysteresis. The amount of hysteresis
+is controlled by the ratio of the W/L of the cross-coupled devices to that of
+the diode-connected PMOS devices. Denoting this ratio as `r`, the current in one
+branch of the input differential pair must exceed that in the other branch by a
+factor of `r` to cause the output to change states. Thus, we must have `r > 1`
+to ensure hysteresis. In this design, `r = 2` was found to result in a
+hysteresis of roughly 1 V in simulation. To ensure a similar slew rate to that
+of the opamp, a 2 uA tail current was chosen, which is generated by the bias
+generator.
+
+## Bias generator
+
+![Bias generator schematic](images/adc_bias_sch.png)
+
+The bias generator is based on [rburt's TT08
+submission](https://github.com/rburt16/tt08-analog-bias-generator). The design
+has been modified to use smaller devices and provide an enable/disable
+functionality using "keeper" devices. Compared to rburt's design, this design
+exhibits a greater temperature dependence since the devices operate closer to
+inversion due to the lower W/L. Still, the bias current was found to vary by
+approximately 10% from 0 to 100 Celsius, which is acceptable for `tiny_adc`
+since the bias current is not critical.
+
+## Reference voltage generator
+
+![Reference generator schematic](images/adc_vref_sch.png)
+
+The reference voltage generator is a simple voltage divider with integrated
+bypass capacitor. The bypass capacitor uses large NMOS devices with drain and
+source shorted to VGND to save area due to the higher capacitance density
+relative to MIM or MOM capacitors in `sky130`. The voltage divider resistors are
+nominally 100 kOhm each, resulting in a roughly 10 uA bias current through the
+divider. The implied bandwidth of the RC filter is 32 MHz. A power switch is
+included to allow the circuit to be powered down with zero static power
+consumption.
 
