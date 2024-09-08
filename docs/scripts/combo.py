@@ -69,5 +69,5 @@ csv = csv.rename(columns={
 csv["ratio"] = csv.r1/csv.r2
 csv = csv.sort_values("ratio")
 
-csv.to_csv("pll.csv", index=False)
+csv.to_csv("combo.csv", index=False)
 
