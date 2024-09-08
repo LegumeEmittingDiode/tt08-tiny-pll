@@ -49,9 +49,6 @@ load capacitance
 3. The speed of the TT mux
 4. The routing between the project tile and the TT mux
 
-The minimum output frequency is limited to roughly 1 MHz due to the minimum
-speed of the VCO.
-
 A 1-bit delta-sigma ADC is included to allow measurement of the analog control
 voltage on `uo[4]`.
 
@@ -394,7 +391,7 @@ can be found [here](/spice/tt_um_tiny_pll_pex.spice). The final instance count
 in the extracted netlist is shown below:
 
 | Cell | Instances |
-| --- | --- |
+| --- | ---: |
 | `sky130_fd_pr__nfet_01v8` | 2,964 |
 | `sky130_fd_pr__nfet_01v8_lvt` | 28 |
 | `sky130_fd_pr__special_nfet_01v8` | 328 |
@@ -431,7 +428,10 @@ As seen in the waveform plots above, lock is achieved for channels 0, 1 and 3
 within 2 us, with an additional ~1us for channel 2 since its output depends on
 that of channel 3. The ADC output at `uo_out[4]` was observed to behave as
 intended, with a time-varying duty cycle corresponding to the control voltage
-for PLL channel 0.
+for PLL channel 0. Powerdown was completed successfully at `t = 5 us`, with DC
+supply current decreased to 0. The remaining power consumption after powerdown
+is caused by the input clock buffers inserted by TritonCTS during clock tree
+synthesis.
 
 Due to the large number of parasitic resistors and capacitors, the simulation
 required roughly 10 hours to complete using an Intel i7-1065G7 processor with
