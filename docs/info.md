@@ -17,6 +17,8 @@
 		* [Reference voltage generator](#adc_vref)
 * [Simulation results](#sim)
 	* [Top level](#sim_top)
+* [Control interface](#control)
+	* [Allowable output frequencies](#combo)
 
 <a name="circuit"></a>
 # Circuit design
@@ -442,4 +444,75 @@ sources could be used to eliminate the need for XSPICE blocks. Although the
 simulation speed could be increased by increasing the maximum timestep from
 100ps to 1ns, this was found to result in incorrect operation of the PLL due to
 the short reset pulse used by this block internally.
+
+<a name="control"></a>
+# Control interface
+[Return to top](#toc)
+
+This section gives details of the digital control interface for the top-level
+tile.
+
+<a name="combo"></a>
+## Allowable output frequencies
+[Return to top](#toc)
+
+This section will detail the range of output frequencies that can be achieved
+using various combinations of the 4 PLL tiles. For simplicity, we will normalize
+to an input frequency `f_ref = 1`.
+
+Each PLL instance allows for 225 distinct divider settings: The output frequency
+is `A/B`, and both A and B can vary between 1 and 15 due to the 4-bit dividers.
+This, however, results in less than 225 possible frequencies, since there can be
+multiple divider settings that result in the same output frequency. For example,
+there are 15 ways to make an output frequency of 1: 1/1, 2/2, 3/3, etc. The
+closest frequency to 1 that can be achieved using a single PLL is 15/14, or
+roughly 1.07. For some high-precision applications, a finer tuning range is
+desired.
+
+This limitation can be overcome by chaining multiple PLLs, which multiplies
+their division ratios. For example, one PLL with a ratio of 14/15 followed by
+another with a ratio of 14/13 results in an output frequency of 196/195, or
+roughly 1.005. This principle holds for chains of 3 or 4 PLLs, which result in
+even finer tuning ranges. Obtaining the exact list of frequencies that can be
+generated using 1 through 4 PLLs is complicated by 2 factors:
+
+1. There can be a large number of ways to generate one given division ratio,
+particularly for values near 1
+2. When multiple PLLs are chained, the input frequency to each PLL should be
+constrained to ensure stable loop dynamics
+
+For ease of design, a Python script has been added [here](scripts/combo.py) that
+generates a list of possible division ratios using 1 through 4 PLL slices. The
+output of this script is a `csv` and is given [here](scripts/combo.csv). This
+script is generated using 2 criteria:
+
+1. To break ties, choose the configuration using the fewest number of PLL
+slices, with the smallest feedback division ratio
+2. When multiple slices are used, the input frequency of each slice should be
+between 0.8 and 1.2
+
+The `csv` has the following columns:
+
+| Column name | Description |
+| --- | --- |
+| `r1` | Numerator of overall output frequency |
+| `r2` | Denominator of overall output frequency |
+| `a1` | Numerator of channel 0 division ratio |
+| `b1` | Denominator of channel 0 division ratio |
+| `a2` | Numerator of channel 1 division ratio. 0 if channel not used. |
+| `b2` | Denominator of channel 1 division ratio. 0 if channel not used. |
+| `a3` | Numerator of channel 2 division ratio. 0 if channel not used. |
+| `b3` | Denominator of channel 2 division ratio. 0 if channel not used. |
+| `a4` | Numerator of channel 3 division ratio. 0 if channel not used. |
+| `b4` | Denominator of channel 3 division ratio. 0 if channel not used. |
+
+The number of unique output frequencies, the closest frequency to 1 and the
+implied minimum tuning step at `f_ref = 10 MHz` are shown below using 1 through
+4 channels:
+
+| Channels used | # of possible frequencies | Implied tuning step at 10 MHz |
+| 1 | 143 | 714 kHz |
+| 2 | 1,821 | 51.3 kHz |
+| 3 | 10,419 | 14.8 kHz |
+| 4 | 39,958 | 939 Hz |
 
