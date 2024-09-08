@@ -510,12 +510,12 @@ The number of unique output frequencies, the closest frequency to 1 and the
 implied minimum tuning step at `f_ref = 10 MHz` are shown below using 1 through
 4 channels:
 
-| Channels used | # of possible frequencies | Implied tuning step at 10 MHz |
+| Channels used | # of possible frequencies | Closest frequency to 1 | Implied tuning step at 10 MHz |
 | --- | --- | --- |
-| 1 | 143 | 714 kHz |
-| 2 | 1,821 | 51.3 kHz |
-| 3 | 10,419 | 14.8 kHz |
-| 4 | 39,958 | 939 Hz |
+| 1 | 143 | 15 / 14 | 714 kHz |
+| 2 | 1,821 | 196 / 195 | 51.3 kHz |
+| 3 | 10,419 | 676 / 675 | 14.8 kHz |
+| 4 | 39,958 | 10,648 / 10,647 | 939 Hz |
 
 It should be noted that the tuning range is not linear: the achievable output
 frequencies are densest near `f = 1`, with the tuning steps becoming larger near
