@@ -517,3 +517,7 @@ implied minimum tuning step at `f_ref = 10 MHz` are shown below using 1 through
 | 3 | 10,419 | 14.8 kHz |
 | 4 | 39,958 | 939 Hz |
 
+It should be noted that the tuning range is not linear: the achievable output
+frequencies are densest near `f = 1`, with the tuning steps becoming larger near
+the extremes.
+
