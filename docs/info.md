@@ -363,3 +363,54 @@ divider. The implied bandwidth of the RC filter is 32 MHz. A power switch is
 included to allow the circuit to be powered down with zero static power
 consumption.
 
+<a name="sim"></a>
+# Simulation results
+[Return to top](#toc)
+
+This section details simulation results for `tt_um_tiny_pll`. Due to time
+constraints, not every block was simulated across PVT corners. Consequently,
+results are only reported here at the TT process corner with `VDD = 1.8 V` and
+`T = 27 C`.
+
+<a name="sim_top"></a>
+## Top level
+[Return to top](#toc)
+
+To verify top-level functionality, a simulation was performed of the full Tiny
+Tapeout tile using extracted parasitics. The netlist used for this simulation
+can be found [here](/spice/tt_um_tiny_pll_pex.spice). The final instance count
+in the extracted netlist is shown below:
+
+| Cell | Instances |
+| --- | --- |
+| `sky130_fd_pr__nfet_01v8` | 2,964 |
+| `sky130_fd_pr__nfet_01v8_lvt` | 28 |
+| `sky130_fd_pr__special_nfet_01v8` | 328 |
+| `sky130_fd_pr__pfet_01v8` | 97 |
+| `sky130_fd_pr__pfet_01v8_hvt` | 3,176 |
+| `sky130_fd_pr__res_xhigh_po_0p35` | 26 |
+| `sky130_fd_pr__res_generic_po` | 54 |
+| `sky130_fd_pr__cap_mim_m3_1` | 3 |
+| `r` | 94,481 |
+| `c` | 50,817 |
+
+The results the top-level simulation are shown below:
+
+![Top-level simulation](images/self_lock.png)
+
+The testbench performs the following steps:
+
+1. Asserts `ena`
+2. Asserts `rst_n` for 50 ns to initialize CSRs
+3. Sets the multiplication ratio for channel 0 to 2/1
+4. Sets the multiplication ratio for channel 1 to 2/1
+5. Sets the multiplication ratio for channel 2 to 6/5
+6. Sets the multiplication ratio for channel 3 to 15/14
+7. Sets the reference source of channel 1 to the output of channel 3
+8. Enables all 4 channels
+9. Disables all 4 channels at `t = 5 us` to test powerdown functionality
+
+As seen in the waveform plots above, lock is achieved for channels 0, 1 and 3
+within 2 us, with an additional ~1us for channel 2 since its output depends on
+that of channel 3.
+
