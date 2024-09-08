@@ -414,3 +414,12 @@ As seen in the waveform plots above, lock is achieved for channels 0, 1 and 3
 within 2 us, with an additional ~1us for channel 2 since its output depends on
 that of channel 3.
 
+Due to the large number of parasitic resistors and capacitors, the simulation
+required roughly 10 hours to complete using an Intel i7-1065G7 processor with
+16GB of RAM. Multithreading support was enabled, and `.options klu` was passed
+to speed up transient simulation, as detailed in the `ngspice` user manual. The
+testbench uses the `d_source` XSPICE component to generate a digital stimulus
+from a `csv` input. This automatically sets `.options trtol=1`, which slows down
+transient simulation by a factor of 2. To speed up simulation, `PWL` voltage
+sources could be used to eliminate the need for XSPICE blocks.
+
