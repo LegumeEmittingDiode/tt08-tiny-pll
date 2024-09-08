@@ -350,6 +350,14 @@ inversion due to the lower W/L. Still, the bias current was found to vary by
 approximately 10% from 0 to 100 Celsius, which is acceptable for `tiny_adc`
 since the bias current is not critical.
 
+A different startup circuit is also used to minimize area consumption. This
+startup circuit relies on the `kick` node being precharged to VPWR when the
+circuit is enabled. As a result, `en` must be brought low for a short time by
+the control logic prior to enabling the circuit. This can be accomplished by
+asserting `rst_n` at the top level, then writing `4'b0000` to CSR address
+`4'h8`, since the default state of the CSRs disables all the PLLs after `rst_n`
+is asserted.
+
 <a name="adc_vref"></a>
 ### Reference voltage generator
 [Return to top](#toc)
@@ -413,6 +421,9 @@ The testbench performs the following steps:
 7. Sets the reference source of channel 1 to the output of channel 3
 8. Enables all 4 channels
 9. Disables all 4 channels at `t = 5 us` to test powerdown functionality
+
+The CSR values are clocked in at 10 MHz using the CSR clock input at
+`uio_in[0]`.
 
 As seen in the waveform plots above, lock is achieved for channels 0, 1 and 3
 within 2 us, with an additional ~1us for channel 2 since its output depends on
