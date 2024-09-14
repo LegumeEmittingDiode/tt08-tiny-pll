@@ -24,6 +24,7 @@
 	* [ADC](#sim_adc)
 		* [Opamp](#sim_adc_opamp)
 		* [Bias generator](#sim_adc_bias)
+		* [Comparator](#sim_adc_comp)
 * [Control interface](#control)
 	* [Pinout and CSR address map](#control_overview)
 	* [Allowable output frequencies](#combo)
@@ -493,15 +494,15 @@ algorithm is roughly as follows:
 
 1. Set the control voltage to the minimum of the desired sweep range
 2. Run an initial transient simulation using a large, pre-determined timestep
-	- Stop the simulation after one cycle is completed
-	- Compute the timestep that would be required to yield 1,000 datapoints
+	a. Stop the simulation after one cycle is completed
+	b. Compute the timestep that would be required to yield 1,000 datapoints
 	  per cycle at the previously measured cycle period
 3. Run another transient simulation using the timestep determined in the
 previous step
-	- After each cycle, measure the period of the VCO output
-	- If the frequency has changed by more than 1% since the previous cycle,
-	  continue simulating
-	- If not, record the frequency and proceed to the next step
+	a. After each cycle, measure the period of the VCO output
+	b. If the frequency has changed by more than 1% since the previous
+	cycle, continue simulating
+	c. If not, record the frequency and proceed to the next step
 4. Update the simulation timestep based on the measured output frequency
 5. If the control voltage sweep has not been completed, jump to step 3
 
@@ -586,7 +587,7 @@ comparator slew rate was adequate to cause the output to transition at the
 minimum output pulse width.
 
 <a name="sim_adc_opamp"></a>
-## Opamp
+### Opamp
 [Return to top](#toc)
 
 Results of an extracted simulation of `tiny_adc_opamp` are shown below:
@@ -644,6 +645,22 @@ PMOS output (source) current. The total variation in both currents is slightly
 more than 10% from 0 to 100 degrees C. While this would be significant for a
 precision circuit, it is less than half the variation of the PLL bias generator,
 which is more than sufficient for this application.
+
+<a name="sim_adc_comp"></a>
+### Comparator
+[Return to top](#toc)
+
+A transient, schematic-only simulation was performed on the ADC comparator to
+characterize hysteresis:
+
+![ADC comparator simulation](images/tb_comp_tran.png)
+
+The `en` and `enb` pins are deasserted to begin the simulation, then asserted at
+10 ns to allow the bias generator to start up. The hysteresis was measured to be
+roughly 1.14 V at the TT process corner. A large hysteresis is desirable here
+because it allows a larger swing at the output of the integrator, which in turn
+means a smaller integrator capacitance is required to guarantee a given minimum
+pulse width.
 
 <a name="control"></a>
 # Control interface
