@@ -28,6 +28,8 @@
 ### [Control interface](#control)
 * [Pinout and CSR address map](#control_overview)
 * [Allowable output frequencies](#combo)
+### [Physical design](#pd)
+* [Analog layout](#pd_analog)
 
 <a name="circuit"></a>
 # Circuit design
@@ -818,4 +820,78 @@ implied minimum tuning step at `f_ref = 10 MHz` are shown below using 1 through
 It should be noted that the tuning range is not linear: the achievable output
 frequencies are densest near `f = 1`, with the tuning steps becoming larger near
 the extremes.
+
+<a name="pd"></a>
+# Physical design
+[Return to top](#toc)
+
+This section details the design and synthesis of the Tiny Tapeout tile for this
+project.
+
+<a name="pd_analog"></a>
+## Analog layout
+[Return to top](#toc)
+
+Layout of the custom blocks in this project was performed using `klayout`. The
+top-level layout of `tiny_pll` is shown below:
+
+![PLL layout](images/pll_layout.png)
+
+The PLL is 77.74 by 13.6 um, for a total area of 1,057 um2. A 1x1 Tiny Tapeout
+tile has 161 by 111.52 um  of usable area, or 17,955 um2. The PLL thus uses only
+5.89% of the area of a tile, making it ideal for integration into larger digital
+or mixed-signal designs without consuming significant area.
+
+The digital sections on the left and right of the macro are the feedback and
+output dividers, respectively. The block in the middle of the macro with the
+large NMOS devices is the loop filter, to the left of which is the bias
+generator, and to the right of which are the VCO and charge pump. The layout is
+designed to use a 13.57 um pitch power grid on `met4` for compatibility with the
+OpenROAD flow. To connect to the global power grid, labels are placed on each
+`met3` via, and the flow places straps on `met4`. These straps are connected to
+`met5` at the top level by Tiny Tapeout.
+
+The top-level layout of `tiny_adc` is shown below:
+
+![ADC layout](images/adc_layout.png)
+
+The ADC is 50.19 um by 24.96 um, or 1,253 um2, which is 6.98% of the area of a
+1x1 Tiny Tapeout tile. The capacitors to the left of the macro are compensation
+capacitors for the two opamps, and the capacitor used in the integrator. The
+opamps, comparator and bias generator are placed near the bottom of the macro,
+and the integrator resistors and reference voltage generator are placed above
+them. All analog blocks were designed to fit on the `sky130_fd_sc_hd` standard
+cell routing grid with a 2.72 um cell height. The routing grid uses a horizontal
+pitch of 0.46 um and a vertical pitch of 0.34 um.
+
+<a name="pd_digital"></a>
+## Digital synthesis
+[Return to top](#toc)
+
+While there is greater support in the `sky130` community for OpenLANE,
+mixed-signal submissions such as this project require a high degree of
+customization to ensure proper handling of macro placement, the power delivery
+network (PDN) and clock tree synthesis (CTS). Consequently, the OpenROAD Flow
+Scripts were used to synthesize this design, with modifications to both the
+`config.mk` and `platform` files to accommodate the mixed-signal macros.
+
+One particularly difficult customization was the use of a custom `sdc`
+constraint due to the generation of internal clocks in the PLLs. It is desirable
+to designate the output nets of the PLLs as clocks, since clocks are by default
+routed on higher metal layers, leading to lower wiring resistance. However, it
+was observed that OpenROAD does not properly account for gate resizing when
+multiple clock trees are used. In particular, despite the addition of a
+`set_cap_load` statement to `constraint.sdc` in the flow, along with a
+`create_clock` statement with the approprate period, the flow ignored the
+external pin load capacitance and placed minimum-sized `clkbuf_1` gates at all
+clock output pins. This behavior is further complicated by the fact that the
+gate resizer is run several times throughout the OpenROAD flow, meaning that
+regardless of the initial size of the buffer placed during CTS, the resizer
+overrides that selection and places a `clkbuf_1` instead.
+
+This issue was resolved by interrupting the flow prior to `detailed_route` by
+calling `make cts`, followed by `make gui_cts`. Once in the OpenROAD GUI, the
+commands `set_cap_load`, followed by `repair_timing`, were used to place `buf_4`
+buffers at each clock output. The flow was then completed by running `make`,
+which fixes any overlaps in the buffer placement and performs detailed routing.
 
