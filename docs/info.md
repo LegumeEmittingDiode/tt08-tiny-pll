@@ -18,6 +18,7 @@
 * [Simulation results](#sim)
 	* [Top level](#sim_top)
 * [Control interface](#control)
+	* [Overview](#control_overview)
 	* [Allowable output frequencies](#combo)
 
 <a name="circuit"></a>
@@ -451,6 +452,87 @@ the short reset pulse used by this block internally.
 
 This section gives details of the digital control interface for the top-level
 tile.
+
+<a name="control_overview"></a>
+## Overview
+[Return to top](#toc)
+
+The control interface for `tiny_pll` is implemented using an array of 4-bit
+control/status registers (CSRs). Pin assignments for the tile are as follows:
+
+| Pin group | Use | Description |
+| --- | --- | --- |
+| `ui_in[3:0]` | `csr_data_in` | CSR data input. |
+| `ui_in[7:4]` | `csr_addr_in` | CSR address input. |
+| `uio_in[0]` | `clk_csr` | CSR clock input, rising-edge sensitive. |
+| `clk` | `clk_in` | PLL reference clock input.
+| `uo_out[3:0]` | `clk_out` | PLL clock outputs. |
+| `uo_out[4]` | `adc_out` | ADC output for control voltage measurement. |
+
+All other I/O pins are unused. Data is clocked into the CSRs at the rising edge
+of `clk_csr`. There are 13 CSRs:
+
+| Address | Register name | Description |
+| --- | --- | --- |
+| `0x0` | `div_fb_0` | PLL channel 0 feedback divider ratio. |
+| `0x1` | `div_out_0` | PLL channel 0 output divider ratio. |
+| `0x2` | `div_fb_1` | PLL channel 1 feedback divider ratio. |
+| `0x3` | `div_out_1` | PLL channel 1 output divider ratio. |
+| `0x4` | `div_fb_2` | PLL channel 2 feedback divider ratio. |
+| `0x5` | `div_out_2` | PLL channel 2 output divider ratio. |
+| `0x6` | `div_fb_3` | PLL channel 3 feedback divider ratio. |
+| `0x7` | `div_out_3` | PLL channel 3 output divider ratio. |
+| `0x8` | `enb` | Active-low enable for PLL channels. |
+| `0x9` | `csr_clk_0_sel` | Input mux selection for PLL channel 0. |
+| `0xA` | `csr_clk_1_sel` | Input mux selection for PLL channel 1. |
+| `0xB` | `csr_clk_2_sel` | Input mux selection for PLL channel 2. |
+| `0xC` | `csr_clk_3_sel` | Input mux selection for PLL channel 3. |
+
+CSR addresses above `0xC` are not used. The `csr_clk_*_sel` registers are used
+to select the reference clock source for each of the PLL channels. This feature
+allows multiple PLL channels to be connected in series, which enables a wider
+range of [possible output frequencies](#combo). Each PLL can be driven either by
+the external reference clock input, or by the output of any of the other 3 PLL
+channels. In particular, for `csr_clk_0_sel`:
+
+| `csr_clk_0_sel` | PLL channel 0 clock source |
+| --- | --- |
+| `0x0` | External reference input. |
+| `0x1` | PLL channel 1 clock output. |
+| `0x2` | PLL channel 2 clock output. |
+| `0x3` | PLL channel 3 clock output. |
+
+For `csr_clk_1_sel`:
+
+| `csr_clk_1_sel` | PLL channel 1 clock source |
+| --- | --- |
+| `0x0` | External reference input. |
+| `0x1` | PLL channel 0 clock output. |
+| `0x2` | PLL channel 2 clock output. |
+| `0x3` | PLL channel 3 clock output. |
+
+For `csr_clk_2_sel`:
+
+| `csr_clk_2_sel` | PLL channel 2 clock source |
+| --- | --- |
+| `0x0` | External reference input. |
+| `0x1` | PLL channel 0 clock output. |
+| `0x2` | PLL channel 1 clock output. |
+| `0x3` | PLL channel 3 clock output. |
+
+For `csr_clk_3_sel`:
+
+| `csr_clk_3_sel` | PLL channel 3 clock source |
+| --- | --- |
+| `0x0` | External reference input. |
+| `0x1` | PLL channel 0 clock output. |
+| `0x2` | PLL channel 1 clock output. |
+| `0x3` | PLL channel 2 clock output. |
+
+Values of `csr_clk_*_sel` greater than `0x3` do not have defined behavior and
+should not be used. Note that this implementation allows the creation of
+unstable loops where a PLL indirectly feeds its own input. This condition should
+also be avoided.
 
 <a name="combo"></a>
 ## Allowable output frequencies
