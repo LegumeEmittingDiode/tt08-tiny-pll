@@ -30,6 +30,7 @@
 * [Allowable output frequencies](#combo)
 ### [Physical design](#pd)
 * [Analog layout](#pd_analog)
+* [Digital synthesis](#pd_digital)
 
 <a name="circuit"></a>
 # Circuit design
