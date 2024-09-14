@@ -17,8 +17,15 @@
 		* [Reference voltage generator](#adc_vref)
 * [Simulation results](#sim)
 	* [Top level](#sim_top)
+	* [PLL](#sim_pll)
+		* [VCO](#sim_pll_vco)
+		* [Divider](#sim_pll_divider)
+		* [Bias generator](#sim_pll_bias)
+	* [ADC](#sim_adc)
+		* [Opamp](#sim_adc_opamp)
+		* [Bias generator](#sim_adc_bias)
 * [Control interface](#control)
-	* [Overview](#control_overview)
+	* [Pinout and CSR address map](#control_overview)
 	* [Allowable output frequencies](#combo)
 
 <a name="circuit"></a>
@@ -44,7 +51,7 @@ provided to the tile through the mux and GPIO pins
 frequency between 67 kHz and 150 MHz. The 4 output clocks are connected to the
 GPIO pins `uo[3:0]`. In reality, the maximum output frequency is limited by 4
 factors:
-1. The speed of the Caravel I/O cells, which itself is a factor of the off-chip
+1. The speed of the `sky130` I/O cells, which itself is a factor of the off-chip
 load capacitance
 2. The routing between the TT mux and the I/O cells
 3. The speed of the TT mux
@@ -446,6 +453,198 @@ simulation speed could be increased by increasing the maximum timestep from
 100ps to 1ns, this was found to result in incorrect operation of the PLL due to
 the short reset pulse used by this block internally.
 
+<a name="sim_pll"></a>
+## PLL
+[Return to top](#toc)
+
+To verify functionality of the `tiny_pll` tile, a transient simulation was
+performed using an extracted SPICE netlist. The results of this simulation are
+shown below:
+
+![PLL simulation](images/tb_pll_pex.png)
+
+This testbench initializes the PLL by pulsing `rstb` then asserting `enb`. The
+feedback division ratio is then swept from 1 to 15 in 2 us steps to verify
+divider operation at each VCO frequency. The dividers were observed to output
+the correct frequency up to the maximum output frequency of 150 MHz. Settling
+time was under 2 us for all divider codes, with higher frequencies settling
+slightly faster with smaller control voltage transients. This is due to the use
+of MOS capacitance in the loop filter: The effective capacitance is larger at
+higher VGS due to the inversion charge in the channel, which results in improved
+loop dynamics relative to lower control voltages. The PLL consumes up to 200 uA
+RMS when active, with higher frequencies resulting in higher current
+consumption. The PLL was disabled at 30 us by deasserting `enb` and consumed
+less than 1 uA thereafter. The power consumption in this condition is likely
+dominated by leakage through the digital gates.
+
+<a name="sim_pll_vco"></a>
+### VCO
+[Return to top](#toc)
+
+The VCO was characterized by measuring its output frequency while sweeping the
+control voltage. The incremental voltage-to-frequency gain `df/dV` was also
+computed to use in loop filter design. The results of this simulation are shown
+below:
+
+![VCO simulation](images/tb_vco_sweep_pex.png)
+
+An `ngspice` control script was used to implement the frequency sweep. The
+algorithm is roughly as follows:
+
+1. Set the control voltage to the minimum of the desired sweep range
+2. Run an initial transient simulation using a large, pre-determined timestep
+	- Stop the simulation after one cycle is completed
+	- Compute the timestep that would be required to yield 1,000 datapoints
+	  per cycle at the previously measured cycle period
+3. Run another transient simulation using the timestep determined in the
+previous step
+	- After each cycle, measure the period of the VCO output
+	- If the frequency has changed by more than 1% since the previous cycle,
+	  continue simulating
+	- If not, record the frequency and proceed to the next step
+4. Update the simulation timestep based on the measured output frequency
+5. If the control voltage sweep has not been completed, jump to step 3
+
+This algorithm limits the length of each transient simulation to the exact
+numebr of cycles that must be completed to ensure the output frequency has
+settled to within 1%. This is especially helpful in reducing simulation time
+when an extracted netlist is used. This is made possible by the `stop` command
+in `ngspice`, which allows breakpoints to be inserted in a transient simulation.
+The breakpoints are triggered when the output voltage is either greater than or
+less than `VPWR/2`, depending on the edge direction. Since rising and falling
+events are not supported, the following method was used to measure the
+oscillator frequency:
+
+1. Run the simulation and stop when `vout < VPWR / 2`
+2. Delete the previous breakpoint
+3. Run the simulation and stop when `vout > VPWR / 2`
+4. Delete the previous breakpoint
+5. Record the current time and the time elapsed since the previous rising edge
+6. If needed, repeat beginning at step 1
+
+Care must be taken to ensure the correct breakpoint is removed, since `ngspice`
+only allows referencing breakpoints by ID, which is a counter that begins at 1
+and increases with the creation of each subsequent breakpoint.
+
+<a name="sim_pll_divider"></a>
+### Divider
+[Return to top](#toc)
+
+The frequency divider was simulated using an extracted netlist to ensure correct
+operation:
+
+![Divider simulation](images/tb_divider_pex.png)
+
+The waveforms above used `lmt = 8`, which results in a division ratio of 16 due
+to the extra flip-flop at the output. The divider was observed to operate
+correctly with an input frequency of 333 MHz, which is higher than the maximum
+VCO frequency of 300 MHz. This was also verified at the SS process corner for
+completeness. The supply current was roughly 120 uA with 10 fF load capacitance.
+Since the layout of the feedback and output dividers is slightly different due
+to asymmetry, these simulations were repeated using both extracted layouts.
+
+<a name="sim_pll_bias"></a>
+### Bias generator
+[Return to top](#toc)
+
+The bias generator was simulated using an extracted netlist to verify output
+current and startup transients:
+
+![PLL bias generator simulation](images/tb_pll_bias_gen.png)
+
+Here, `i(viout)` and `i(vipwr)` are the output and supply currents,
+respectively. As shown in the [schematic above](#pll_bias), the PMOS diode
+devices `MPSU1` and `MPSU2` are included to charge the `kick` node to VPWR.
+Consequently, this bias generator can start up without requiring a pulse on `en`
+like the ADC bias generator.
+
+The output current is nominally 1 uA but varies up to 20% across process and
+temperature due to the use of the `xhigh_po` resistor, which has a positive
+temperature coefficient. This was deemed to be acceptable for the PLL, since the
+bias generator only controls the charge pump current, which results in a stable
+loop even under significant variations in current. A future revision of the PLL
+tile would replace this bias generator with the one used in the ADC, which does
+not use a resistor, and thus offers lower variation across corners and reduced
+area.
+
+<a name="sim_adc"></a>
+## ADC
+[Return to top](#toc)
+
+Schematic-only simulations were performed for `tiny_adc` to verify
+functionality. Results of this simulation are shown below:
+
+![ADC simulation](images/tb_adc.png)
+
+Here, a 100 kHz sine wave with 1.8 V amplitude is applied to the ADC input to
+test rail-to-rail capability. The output was observed to have a time-varying
+duty cycle corresponding to the instantaneous input level, as expected. The
+trace `xdut.in_buf` is the output of the buffer opamp, which was observed to
+track the input voltage to within a small distance of the positive and negative
+supplies. The comparator output at `xdut.cmp_out` was measured to ensure the
+comparator slew rate was adequate to cause the output to transition at the
+minimum output pulse width.
+
+<a name="sim_adc_opamp"></a>
+## Opamp
+[Return to top](#toc)
+
+Results of an extracted simulation of `tiny_adc_opamp` are shown below:
+
+![Opamp simulation](images/tb_opamp_vcm_sweep_pex.png)
+
+Here, the common-mode voltage `vcm_vec` is swept from 0 V to 1.8 V, and an AC
+simulation is run at each bias point. `aol_vec` is the open-loop gain in dB,
+`gbw_vec` is the unity-gain bandwidth in MHz, `pm_vec` is the phase margin in
+degrees, and `vos_vec` is the systematic offset voltage in V. Simulations were
+performed with a load capacitance of 10 fF. The opamp exhibits a high gain
+between 90 dB and 105 dB due to the two-stage architecture. The minimum phase
+margin is roughly 55 degrees near a common-mode voltage of 1 V.  The minimum
+bandwidth of roughly 25 MHz occurs with a common-mode input near ground. The
+bandwidth peaks near mid-supply, since both the NMOS and PMOS input pairs are
+active in this area, leading to a higher transconductance in the input stage.
+While the systematic offset is very low, Monte Carlo simulations would be
+required to characterize the offset with device mismatch.
+
+A transient simulation was also performed using the extracted netlist to verify
+stability under unity-gain feedback:
+
+![Opamp step response](images/tb_opamp_tran_pex.png)
+
+The simulation was performed with a load capacitance of 10 fF. Overshoot and
+undershoot of roughly 0.5% were observed in the small-signal step response at
+the worst-case common-mode input of roughly VPWR/2. This simulation is likely
+pessimistic relative to the in-circuit conditions, since the load capacitance
+seen by each opamp is likely to be less than 10 fF.
+
+<a name="sim_adc_bias"></a>
+### Bias generator
+[Return to top](#toc)
+
+The ADC bias generator was simulated using an extracted netlist to verify
+startup behavior:
+
+![ADC bias generator simulation](images/tb_adc_bias_gen.png)
+
+Unlike the PLL bias generator, this circuit will not start up unless `en` and
+`enb` are temporarily deasserted to precharge the `kick` node high. While this
+adds an extra requirement to the initialization sequence, it slightly reduces
+area of the bias generator by avoiding the need for a resistor or diode-
+connected devices to charge the `kick` node asynchronously. Since `en` is
+deasserted by default when `rst_n` is asserted at the chip level, a short pulse
+at `rst_n` is sufficient to ensure startup.
+
+A temperature sweep was performed using the schematic-only netlist to
+characterize the temperature dependence of the output currents:
+
+![ADC bias generator temp sweep](images/tb_adc_bias_gen_temp_sweep.png)
+
+Here, `iout_vec_n` is the NMOS output (sink) current, and `iout_vec_p` is the
+PMOS output (source) current. The total variation in both currents is slightly
+more than 10% from 0 to 100 degrees C. While this would be significant for a
+precision circuit, it is less than half the variation of the PLL bias generator,
+which is more than sufficient for this application.
+
 <a name="control"></a>
 # Control interface
 [Return to top](#toc)
@@ -454,7 +653,7 @@ This section gives details of the digital control interface for the top-level
 tile.
 
 <a name="control_overview"></a>
-## Overview
+## Pinout and CSR address map
 [Return to top](#toc)
 
 The control interface for `tiny_pll` is implemented using an array of 4-bit
